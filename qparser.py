@@ -6,6 +6,8 @@ import time
 import xlsxwriter
 from configparser import ConfigParser
 from selenium.webdriver.support.ui import Select
+import PyPDF2
+import glob
 
 
 def main():
@@ -14,11 +16,11 @@ def main():
     dl_location = os.path.join(os.getcwd(), dl_dir)
     prefs = {"download.default_directory": dl_location}
     chrome_options.add_experimental_option("prefs", prefs)
-    chromedriver = "./chromedriver"
-    driver = webdriver.Chrome(executable_path=chromedriver, chrome_options=chrome_options)
+    driver = webdriver.Chrome(options=chrome_options)
     driver.maximize_window()
     driver.get('https://itdashboard.gov/')
     time.sleep(2)
+
     # # Click on a button 'Dive-In'
     bnt_dive_in = driver.find_element(By.CLASS_NAME, 'trend_sans_oneregular')
     bnt_dive_in.click()
@@ -126,9 +128,27 @@ def main():
         time.sleep(5)
         bnt_dwnld_pdf = driver.find_element(By.LINK_TEXT, 'Download Business Case PDF')
         bnt_dwnld_pdf.click()
-        time.sleep(5)
+        time.sleep(8)
 
-    input()
+    # Finding the required values in the table 'Individual Investment'
+    for filename in glob.glob('*.pdf'):
+        with open(filename, 'rb') as pdf_file:
+            reader = PyPDF2.PdfFileReader(pdf_file)
+            page = reader.getPage(0)
+            text = page.extractText()
+            text_lines = text.splitlines()
+            name_of_investment = text_lines[31]
+            unique_investment_identifier = text_lines[34]
+        print('PDF-file name: ' + filename)
+        print('Name of Investment: ' + name_of_investment)
+        print('Unique Investment Identifier: ' + unique_investment_identifier)
+
+        if name_of_investment in investment_title_list and unique_investment_identifier in uii_list:
+            print('The values are equal')
+        else:
+            print('The specified values were not found in the datasheet')
+
+    driver.close()
 
 
 if __name__ == '__main__':
